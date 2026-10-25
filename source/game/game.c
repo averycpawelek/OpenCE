@@ -168,6 +168,7 @@ struct game_options;
 #include "objects/widgets/widgets.h"
 #include "physics/breakable_surfaces.h"
 #include "physics/collision_usage.h"
+#include "physics/physics.h" /* port: physics_set_gravity_scale */
 #include "physics/point_physics.h"
 #include "rasterizer/common/rasterizer_common.h"
 #include "rasterizer/rasterizer.h"
@@ -183,10 +184,17 @@ struct game_options;
 #include "units/units.h"
 #include "units/vehicles.h"
 #include "network_coop.h" /* port: port/linux/game/network_coop.c */
+#include "coop_enemies.h" /* port: port/linux/game/coop_enemies.c */
 #ifdef HALO_PROFILE
 #include "profile_console.h" /* port: port/linux/game/profile_console.c */
 #endif
 #include "profile_sections.h" /* port: port/linux/include/profile_sections.h */
+
+/* port: port_config.c's (game.gravity, game.enemies_multiplier,
+game.enemies_grunts_only) */
+double config_real(const char *name);
+long config_integer(const char *name);
+int config_boolean(const char *name);
 
 /* network_game_globals.c's */
 boolean network_game_distributed_client(void);
@@ -324,6 +332,11 @@ void game_initialize(
 	player_ui_initialize();
 	bink_playback_initialize();
 	progress_bar_initialize();
+	/* port: game.gravity, a fraction of the stock game's gravity (physics.c) */
+	physics_set_gravity_scale((real)config_real("game.gravity"));
+	/* port: single player's extra enemies (coop_enemies.c) */
+	coop_enemies_solo_set(config_integer("game.enemies_multiplier"),
+		(boolean)config_boolean("game.enemies_grunts_only"));
 
 	return;
 }
@@ -353,6 +366,9 @@ void game_tick(
 	/* port: a client of another's game, the host's rules (its own cheats and
 	game speed, set before it joined too, put back) */
 	profile_scope(game_tick_cheats_enforce_section, cheats_network_client_enforce();)
+	/* port: single player's extra enemies: the dropships' riders kept for
+	want of seats get out with the rest (coop_enemies.c) */
+	coop_enemies_solo_update();
 	profile_scope(game_tick_remove_quitting_players_section, remove_quitting_players_from_game();)
 	profile_scope(game_tick_allegiance_section, game_allegiance_update();)
 	profile_scope(game_tick_units_section, units_update();)

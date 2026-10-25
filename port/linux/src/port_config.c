@@ -452,6 +452,22 @@ static const struct config_setting config_settings[] =
 		"profile starts at The Pillar of Autumn and opens each level as the one\n"
 		"before it is finished, as on the Xbox. Profiles already made keep their\n"
 		"progress; the console's profile_reset_campaign starts one over." },
+	{ "game.gravity", _config_real, "1.0", "HALO_GRAVITY", _environment_value, _platform_all,
+		"Gravity, as a fraction of the stock game's, from 0.01 to 10: 0.1 is a\n"
+		"tenth (jumps ten times as high, and ten times as long). It moves\n"
+		"players, the AI, vehicles, grenades, dropped weapons and debris alike.\n"
+		"The console's gravity command changes it until the game quits. Every\n"
+		"machine of a network game should have the same." },
+	{ "game.enemies_multiplier", _config_integer, "1", "HALO_ENEMIES_MULTIPLIER", _environment_value, _platform_all,
+		"A single player game's extra enemies: each squad of enemies a level\n"
+		"places is this many times as large (1: as the level has it; up to\n"
+		"100), placed round the squad as network co-op's extra enemies are.\n"
+		"Past about 750 extra enemies at once there is no room for more, and\n"
+		"hundreds of them slow the game. The console's enemies command changes\n"
+		"it until the game quits (map_reset starts the level again with it)." },
+	{ "game.enemies_grunts_only", _config_boolean, "false", "HALO_ENEMIES_GRUNTS_ONLY", _environment_value,
+		_platform_all,
+		"true: game.enemies_multiplier makes only the grunts' squads larger." },
 
 	{ "game.downloaded_maps", _config_string, "\"\"", "HALO_DOWNLOADED_MAPS", _environment_value, _platform_all,
 		"Maps played as downloaded ones, besides those map sharing downloaded:\n"

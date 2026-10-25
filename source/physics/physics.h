@@ -70,6 +70,12 @@ void physics_update(
 
 void render_debug_physics(struct physics_instance *instance);
 
+/* port: game.gravity and the console's gravity command (physics.c) */
+void physics_set_gravity_scale(
+	real scale);
+real physics_get_gravity_scale(
+	void);
+
 
 /* ---------- globals */
 

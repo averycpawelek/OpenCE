@@ -159,6 +159,13 @@ enum
 	NUMBER_OF_POWERED_MASS_POINT_FLAGS
 };
 
+/* port: global_gravity's stock value, and the fractions of it that
+physics_set_gravity_scale takes (the AI's ballistic aim,
+projectile_aim_ballistic, needs some gravity) */
+#define STOCK_GLOBAL_GRAVITY 0.0035651792f
+#define MINIMUM_GRAVITY_SCALE 0.01f
+#define MAXIMUM_GRAVITY_SCALE 10.0f
+
 /* ---------- macros */
 
 /* January's physics.c expands point_from_line3d in place for points and
@@ -301,6 +308,27 @@ static boolean warned_about_physics_mass_points;
 static boolean warned_about_physics_inertial_matrix;
 
 /* ---------- public code */
+
+/* port: game.gravity (port_config.c) and the console's gravity command
+(hs.c): global_gravity as a fraction of the stock game's, which moves
+bipeds, vehicles, projectiles, items and particles alike */
+void physics_set_gravity_scale(
+	real scale)
+{
+	if (!(scale >= MINIMUM_GRAVITY_SCALE))
+		scale = MINIMUM_GRAVITY_SCALE;
+	else if (scale > MAXIMUM_GRAVITY_SCALE)
+		scale = MAXIMUM_GRAVITY_SCALE;
+	global_gravity = STOCK_GLOBAL_GRAVITY*scale;
+
+	return;
+}
+
+real physics_get_gravity_scale(
+	void)
+{
+	return global_gravity/STOCK_GLOBAL_GRAVITY;
+}
 
 real pin_fraction(
 	real value,

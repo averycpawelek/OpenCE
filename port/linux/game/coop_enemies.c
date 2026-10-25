@@ -27,10 +27,18 @@ way), they are placed beside those riders, a few ticks apart, and drop and
 fight as they do. A dropship gone first takes them with it.
 
 Only the host runs the AI, so all of this is the host's.
+
+A single player game has its own extra enemies, the same way placed
+(game.enemies_multiplier, game.enemies_grunts_only, and the console's
+enemies command): each squad of the players' enemies placed is that many
+times as large (up to SOLO_ENEMIES_MAXIMUM_MULTIPLIER), or only the grunts'
+squads. The actors the level keeps for its own placements are kept from
+them too.
 */
 
 #include "cseries.h"
 #include "ai/actor_placement.h"
+#include "ai/actor_types.h"
 #include "ai/actors.h"
 #include "ai/ai_scenario_definitions.h"
 #include "ai/encounters.h"
@@ -71,6 +79,9 @@ enum
 	COOP_ENEMIES_MAXIMUM_MULTIPLIER = 32,
 	/* the largest PER PLAYER makes a squad, in times its size */
 	COOP_ENEMIES_MAXIMUM_GROWTH = 8,
+	/* single player's largest multiplier (its extra enemies are still no
+	more than the actors left past COOP_ENEMIES_LEVEL_ACTORS) */
+	SOLO_ENEMIES_MAXIMUM_MULTIPLIER = 100,
 	/* the rings tried around a starting location, the first holding
 	SPREAD_PLACES_PER_RING places and each further one that many more */
 	SPREAD_RINGS = 5,
@@ -154,6 +165,17 @@ static struct
 	short rider_count;
 } coop_enemies;
 
+/* single player's extra enemies: the multiplier (1: none), whether only
+the grunts' squads grow, and the game time as the last tick began (which a
+revert to a checkpoint, the level started again or another level takes
+back) */
+static struct
+{
+	short multiplier;
+	boolean grunts_only;
+	long time;
+} solo_enemies = { 1, FALSE, NONE };
+
 /* ---------- private code */
 
 static boolean coop_enemies_host(
@@ -162,12 +184,19 @@ static boolean coop_enemies_host(
 	return game_connection() == _game_connection_network_server && network_coop_active();
 }
 
+/* whether this game is single player's, with extra enemies */
+static boolean coop_enemies_solo(
+	void)
+{
+	return game_connection() == _game_connection_local && solo_enemies.multiplier > 1;
+}
+
 /* whether this game has extra enemies (it is a co-op host's, with some
-chosen) */
+chosen, or single player's, with some) */
 static boolean coop_enemies_on(
 	void)
 {
-	return coop_enemies.mode != _coop_enemies_none && coop_enemies_host();
+	return (coop_enemies.mode != _coop_enemies_none && coop_enemies_host()) || coop_enemies_solo();
 }
 
 /* the players in the game, every machine's: the network game's (a level
@@ -437,7 +466,8 @@ void coop_enemies_reset(
 
 short coop_enemies_extra_count(
 	long encounter_index,
-	short count)
+	short count,
+	short actor_type)
 {
 	struct encounter_datum *encounter;
 	long extra, room;
@@ -448,7 +478,13 @@ short coop_enemies_extra_count(
 	encounter = encounter_get(encounter_index);
 	if (!game_team_is_enemy(_game_team_player, encounter->team_index))
 		return 0;
-	if (coop_enemies.mode == _coop_enemies_multiplier)
+	if (coop_enemies_solo())
+	{
+		if (solo_enemies.grunts_only && actor_type != _actor_grunt)
+			return 0;
+		extra = (long)count * (solo_enemies.multiplier - 1);
+	}
+	else if (coop_enemies.mode == _coop_enemies_multiplier)
 		extra = (long)count * (coop_enemies.multiplier - 1);
 	else
 	{
@@ -623,7 +659,9 @@ void coop_enemies_update(
 	long now = game_time_get();
 	short vehicle_number;
 
-	if (!coop_enemies_host())
+	/* (single player's too, from coop_enemies_solo_update: riders kept
+	before its multiplier went back to 1 still get out) */
+	if (!coop_enemies_host() && game_connection() != _game_connection_local)
 		return;
 	for (vehicle_number = coop_enemies.vehicle_count - 1; vehicle_number >= 0; vehicle_number--)
 	{
@@ -680,4 +718,39 @@ void coop_enemies_update(
 		}
 		vehicle->next_release_time = now + RIDER_RELEASE_TICKS;
 	}
+}
+
+void coop_enemies_solo_set(
+	long multiplier,
+	boolean grunts_only)
+{
+	solo_enemies.multiplier = (short)PIN(multiplier, 1, SOLO_ENEMIES_MAXIMUM_MULTIPLIER);
+	solo_enemies.grunts_only = grunts_only;
+}
+
+short coop_enemies_solo_multiplier(
+	void)
+{
+	return solo_enemies.multiplier;
+}
+
+boolean coop_enemies_solo_grunts_only(
+	void)
+{
+	return solo_enemies.grunts_only;
+}
+
+void coop_enemies_solo_update(
+	void)
+{
+	long now = game_time_get();
+
+	if (game_connection() != _game_connection_local)
+		return;
+	/* (the game went back: the riders kept are of the game state it went
+	back from, and are forgotten before this tick's scripts keep others) */
+	if (now < solo_enemies.time)
+		coop_enemies_reset();
+	solo_enemies.time = now;
+	coop_enemies_update();
 }

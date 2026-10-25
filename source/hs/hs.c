@@ -2810,6 +2810,8 @@ symbols in this file:
 #include "objects/object_lights.h"
 #include "objects/scenery.h"
 #include "physics/breakable_surfaces.h"
+#include "physics/physics.h" /* port: the console's gravity command */
+#include "coop_enemies.h" /* port: port/linux/game/coop_enemies.c, the console's enemies command */
 #include "rasterizer/rasterizer.h"
 #include "render/render.h"
 #include "saved games/game_state.h"
@@ -15614,6 +15616,59 @@ static boolean hs_compile_and_evaluate_command(
 	{
 		console_warning("not while playing in another's game: the host decides the game");
 		return FALSE;
+	}
+	/* port: gravity, which shows the gravity as a fraction of the stock
+	game's, and "gravity <fraction>", which sets it until the game quits
+	(game.gravity, physics_set_gravity_scale) */
+	{
+		char const *text = hs_host_player_command(expression, "gravity");
+
+		if (text)
+		{
+			while (*text == ' ' || *text == '\t')
+				text++;
+			if (*text && *text != ')')
+			{
+				real scale = (real)atof(text);
+
+				if (!(scale > 0.0f))
+				{
+					console_warning("gravity takes a fraction of the stock gravity above 0: gravity 0.1 is a tenth");
+					return FALSE;
+				}
+				physics_set_gravity_scale(scale);
+			}
+			console_printf(FALSE, "gravity is %.2f of the stock game's (from 0.01 to 10)",
+				physics_get_gravity_scale());
+			return TRUE;
+		}
+	}
+	/* port: enemies, which shows single player's extra enemies, and
+	"enemies <multiplier> [grunts]", which sets them until the game quits:
+	each squad of enemies placed from then on is that many times as large,
+	or only the grunts' squads (game.enemies_multiplier, coop_enemies.c) */
+	{
+		char const *text = hs_host_player_command(expression, "enemies");
+
+		if (text)
+		{
+			while (*text == ' ' || *text == '\t')
+				text++;
+			if (*text && *text != ')')
+			{
+				long multiplier = atol(text);
+
+				if (multiplier < 1)
+				{
+					console_warning("enemies takes how many times as large each squad is, 1 or more: enemies 10, or enemies 10 grunts");
+					return FALSE;
+				}
+				coop_enemies_solo_set(multiplier, strstr(text, "grunt") != NULL);
+			}
+			console_printf(FALSE, "enemies: each squad placed from now on is %d times as large%s (1 to 100); map_reset starts the level again with them",
+				(int)coop_enemies_solo_multiplier(), coop_enemies_solo_grunts_only() ? ", the grunts' only" : "");
+			return TRUE;
+		}
 	}
 	/* port: the host's ban and kick commands ("ban <player name>", "kick
 	<player name>", or the name's start: Tab completes it), which are no

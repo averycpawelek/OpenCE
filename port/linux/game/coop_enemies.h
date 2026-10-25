@@ -15,11 +15,29 @@ void coop_enemies_new_game(
 void coop_enemies_reset(
 	void);
 
-/* encounters.c: how many enemies more a squad placed with `count` gets
-(none but on a co-op host, for an encounter of the players' enemies) */
+/* encounters.c: how many enemies more a squad of `actor_type` placed with
+`count` gets (none but on a co-op host or in a single player game with
+extra enemies, for an encounter of the players' enemies) */
 short coop_enemies_extra_count(
 	long encounter_index,
-	short count);
+	short count,
+	short actor_type);
+
+/* single player's extra enemies (game.enemies_multiplier,
+game.enemies_grunts_only, the console's enemies command): each squad of
+the players' enemies placed from then on is `multiplier` times as large
+(1: as the level has it), or only the grunts' squads */
+void coop_enemies_solo_set(
+	long multiplier,
+	boolean grunts_only);
+short coop_enemies_solo_multiplier(
+	void);
+boolean coop_enemies_solo_grunts_only(
+	void);
+/* game.c, as each tick of a single player game begins: the dropships'
+riders kept placed once their vehicle's own get out */
+void coop_enemies_solo_update(
+	void);
 
 /* the places coop_enemies_spread_position tries around a starting location */
 #define COOP_ENEMIES_SPREAD_SPOTS 90

@@ -2272,11 +2272,12 @@ void encounter_create(
 				encounter_place_actor(encounter_index, squad_index, initial_variant, FALSE, 0);
 				initial_variant = 0;
 			}
-			/* port: network co-op's extra enemies, for its players
-			(coop_enemies.c) */
+			/* port: network co-op's extra enemies, for its players, and
+			single player's (coop_enemies.c) */
 			{
 				/* port: the Monitor is a scripted character, even on a hostile team. */
-				short extra_count = actor_type == _actor_monitor ? 0 : coop_enemies_extra_count(encounter_index, count);
+				short extra_count = actor_type == _actor_monitor ? 0 :
+					coop_enemies_extra_count(encounter_index, count, actor_type);
 
 				for (i = 0; i < extra_count; ++i)
 					encounter_place_actor(encounter_index, squad_index, 0, FALSE, (short)(i + 1));
